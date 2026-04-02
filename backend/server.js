@@ -1,8 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 import connectDB from './config/db.js';
 import errorHandler from './middleware/errorHandler.js';
+import swaggerSpec from './config/swagger.js';
 
 // Route imports
 import authRoutes from './routes/authRoutes.js';
@@ -31,11 +33,34 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+// ─── Swagger UI ───
+app.use(
+  '/api/docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: 'Finance Dashboard API Docs',
+    customCss: '.swagger-ui .topbar { background-color: #1a1a2e; }',
+    swaggerOptions: {
+      persistAuthorization: true,   // keeps token across page reloads
+      displayRequestDuration: true, // shows response time
+      filter: true,                 // enables search/filter bar
+      tryItOutEnabled: true,        // opens Try-it-out by default
+    },
+  })
+);
+
+// ─── Swagger JSON spec (for external tools like Postman) ───
+app.get('/api/docs.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // ─── API Routes ───
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+
 
 // ─── 404 Handler ───
 app.use((_req, res) => {
@@ -54,8 +79,10 @@ const startServer = async () => {
     await connectDB();
     app.listen(PORT, () => {
       console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-      console.log(`📋 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}\n`);
+      console.log(`📋 Health check:  http://localhost:${PORT}/api/health`);
+      console.log(`📚 API Docs (UI): http://localhost:${PORT}/api/docs`);
+      console.log(`📄 API Docs (JSON): http://localhost:${PORT}/api/docs.json`);
+      console.log(`🌍 Environment:   ${process.env.NODE_ENV || 'development'}\n`);
     });
   } catch (error) {
     console.error('Failed to start server:', error.message);
